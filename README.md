@@ -132,6 +132,7 @@
 
 ## 更多文档
 
-- [ARCHITECTURE.md](ARCHITECTURE.md)：数据流、文件职责、扩展配方（改 HUD / 换识别器 / 换提示音 / 独立窗口）；
-- [CHANGELOG.md](CHANGELOG.md)：版本变更；
-- [LICENSE](LICENSE)：MIT。
+- [ARCHITECTURE.md](https://github.com/ljz970803/dsh-voice-wake/blob/main/ARCHITECTURE.md)：数据流、文件职责、扩展配方（改 HUD / 换识别器 / 换提示音 / 独立窗口）；
+- [CHANGELOG.md](https://github.com/ljz970803/dsh-voice-wake/blob/main/CHANGELOG.md)：版本变更；
+- [LICENSE](https://github.com/ljz970803/dsh-voice-wake/blob/main/LICENSE)：MIT；
+- [GitHub 仓库](https://github.com/ljz970803/dsh-voice-wake)：源码与 issue。
