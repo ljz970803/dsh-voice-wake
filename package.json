@@ -1,0 +1,51 @@
+{
+  "name": "dsh-voice-wake",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "本地语音唤醒：常听麦克风 + DSH 内置 SenseVoice 识别；只说唤醒词，听到提示音后说内容，自动发送到会话；带可拖动 HUD 卡片。",
+  "keywords": [
+    "dsh",
+    "deepseek-harness",
+    "cordis",
+    "plugin",
+    "voice",
+    "wake-word",
+    "speech-to-text",
+    "hud"
+  ],
+  "license": "MIT",
+  "main": "lib/index.js",
+  "scripts": {
+    "test": "node --test",
+    "test:no-isolation": "node --test --test-isolation=none"
+  },
+  "exports": {
+    ".": "./lib/index.js",
+    "./client": "./client.js",
+    "./hud": "./hud.js",
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib",
+    "assets",
+    "client.js",
+    "hud.js",
+    "cordis.patch.yml",
+    "README.md",
+    "ARCHITECTURE.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-settings"
+      ],
+      "platform": "web"
+    }
+  }
+}

@@ -1,0 +1,14 @@
+# Bundle patch layer for dsh-voice-wake (鲸鱼).
+# The row loads the package main entry as the Host half (a plain Cordis plugin);
+# the `dsh.client` declaration in package.json makes the web app load ./client
+# as the browser half. No paths are hard-coded here: `dshHomePath` resolves the
+# per-user directories, and the Host plugin falls back to the same resolver when
+# a field is omitted.
+- insert:
+    - id: voice-wake
+      name: dsh-voice-wake
+      config:
+        dataRoot: !!js dshHomePath('dsh-voice-wake')
+        # SenseVoice + Silero model root shipped with the DSH speech-to-text
+        # bundle. Also the first entry of the plugin's own path resolver.
+        modelRoot: !!js dshHomePath('speech-to-text', 'sensevoice', 'models')
