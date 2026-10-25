@@ -2,6 +2,16 @@
 
 给 DSH 用的本地语音唤醒插件：**叫醒 → 请讲**。先说唤醒词，听到「叮-咚」后说内容，停一下就自动发送到会话。
 
+## 给 agent 的速览
+
+- 解决什么：手被占用、不想打字、或不方便操作电脑时，用语音把指令发进 DSH 会话。
+- 怎么用：单独说唤醒词（默认「鲸鱼」，不要带内容）→ 听到提示音 → 说指令 → 停顿后自动发送。
+- 前置：DSH 提供 `speechToText`（本机 SenseVoice），并允许麦克风；音频只在本机识别、不落盘。
+- 包名/安装：`dsh-voice-wake` / `npm i dsh-voice-wake`
+- 配置：`wakeWords` / `wakeSensitivity` / `silenceMs` / `followActive`
+- 扩展：`beforeSend` / `onTranscript` / `onStateChange` / `hud.js`
+- 详细：`ARCHITECTURE.md`
+
 ## 这是什么
 
 - **本地识别**：复用 DSH 自带的 SenseVoice，音频不落盘、不出本机、不消耗 token；
