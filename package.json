@@ -1,6 +1,6 @@
 {
   "name": "dsh-voice-wake",
-  "version": "1.0.4",
+  "version": "1.1.0",
   "type": "module",
   "description": "本地语音唤醒：常听麦克风 + DSH 内置 SenseVoice 识别；只说唤醒词，听到提示音后说内容，自动发送到会话；带可拖动 HUD 卡片。",
   "keywords": [

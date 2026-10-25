@@ -73,12 +73,19 @@ window.__ModuleLoader__.load({
       hudErrorPrefix: 'HUD 加载失败：',
       saveErrorPrefix: '保存失败：',
       wakeAtStartTitle: '要求唤醒词在段首',
-      wakeAtStartHint: '避免聊天里提到唤醒词就误触发。',
-      advancedNote: '唤醒词必须在段首，句中顺带提到「鲸鱼」不会误唤醒。',
+      wakeAtStartHint: '唤醒词必须在段首；句中顺带提到唤醒词，也不会误唤醒。',
       probeTitle: '快速唤醒探测',
       probeHint: '每段开头多跑最多 3 次短识别，命中就尽快切段确认，提示音响得更快；吃 CPU（约 0.2–0.5 秒/段），机器慢可以关掉。',
       followTitle: '发到当前会话',
       followHint: '开启：语音消息跟着你当前打开的会话走；关闭：固定发到「语音唤醒会话」，切到别的会话也不变。',
+      riskTitle: '高风险提醒',
+      riskHint: '命中敏感词时，在该条语音消息末尾追加一句提醒；只提醒，不拦截发送。',
+      riskWordsTitle: '敏感词',
+      riskWordsHint: '英文逗号分隔；留空表示不检测。默认只覆盖删除、清空、发布、付款等明显不可逆操作。',
+      riskWordsPlaceholder: '删除,删掉,清空,覆盖,格式化,卸载,发布,部署,付款,转账,改权限,rm -rf,drop table,git reset --hard',
+      riskReset: '恢复默认',
+      logTextTitle: '诊断日志记录识别文字',
+      logTextHint: '默认关闭。开启后，识别文字会写入本地日志，可能包含你的语音内容；仅排查问题时临时打开。',
       micTestTitle: '麦克风测试',
       micTestHint: '录 3 秒只做识别，不会发进会话；会顺带估环境底噪。',
       micPreviewOn: '开始预览',
@@ -107,6 +114,7 @@ window.__ModuleLoader__.load({
       diagCopied: '已复制到剪贴板。',
       diagCopyFailed: '复制失败，请手动选中下面的文本。',
       diagExport: '导出文件',
+      diagPrivacyHint: '诊断信息包含最近一次识别文本；导出/复制前请确认。',
       diagSelfCheck: '链路自检',
       diagSelfChecking: '正在自检…',
       diagSelfCheckOk: '自检通过：Host 收到 0.5 秒静音并完成识别（文本为空是正常的）。',
@@ -279,6 +287,9 @@ window.__ModuleLoader__.load({
       chimeVolume: 32,
       probeEnabled: true,
       followActive: false,
+      riskNotice: true,
+      riskWords: '',
+      logTranscript: false,
       /** HUD：开关 + 四个初值（位置/折叠/透明度/层级），来自 Host 的 /state。 */
       hudEnabled: true,
       hudPosition: null,
@@ -358,6 +369,9 @@ window.__ModuleLoader__.load({
         chimeVolume: Number.isFinite(state.chimeVolume) ? Math.max(0, Math.min(100, Math.round(state.chimeVolume))) : status.chimeVolume,
         probeEnabled: state.probeEnabled !== false,
         followActive: state.followActive !== false,
+        riskNotice: state.riskNotice !== false,
+        riskWords: typeof state.riskWords === 'string' ? state.riskWords : '',
+        logTranscript: state.logTranscript === true,
         hudEnabled: state.hudEnabled !== false,
         hudPosition: normalizeHudPosition(state.hudPosition),
         hudCollapsed: state.hudCollapsed === true,
@@ -399,6 +413,8 @@ window.__ModuleLoader__.load({
     const SILENCE_DEFAULT = 2000
     const SILENCE_MIN = 400
     const SILENCE_MAX = 8000
+    /** 与 lib/risk.js 的 DEFAULT_RISK_WORDS 保持一致，用于「恢复默认」。 */
+    const DEFAULT_RISK_WORDS = '删除,删掉,清空,格式化,覆盖,卸载,发布,部署,付款,转账,改权限,rm -rf,drop table,git reset --hard'
     /**
      * 唤醒灵敏度：1–10 档，必须与 Host 的 lib/config.js 一致。
      * 每档给一个「绝对下限」和一个「底噪倍数」：
@@ -2015,6 +2031,7 @@ window.__ModuleLoader__.load({
       const [devices, setDevices] = React.useState([])
       const [wakeDraft, setWakeDraft] = React.useState('')
       const [wakeAtStartDraft, setWakeAtStartDraft] = React.useState(true)
+      const [riskWordsDraft, setRiskWordsDraft] = React.useState('')
       const [busy, setBusy] = React.useState(false)
       const [notice, setNotice] = React.useState('')
       const [loadError, setLoadError] = React.useState('')
@@ -2031,6 +2048,7 @@ window.__ModuleLoader__.load({
             applyServerState(payload)
             setWakeDraft(typeof payload?.config?.wakeWords === 'string' ? payload.config.wakeWords : '')
             setWakeAtStartDraft(payload?.config?.wakeAtStart !== false)
+            setRiskWordsDraft(typeof payload?.config?.riskWords === 'string' ? payload.config.riskWords : '')
             setLoadError('')
           } catch (error) {
             if (alive) setLoadError(error instanceof Error ? error.message : String(error))
@@ -2056,6 +2074,7 @@ window.__ModuleLoader__.load({
           applyServerState(payload)
           if (typeof payload?.config?.wakeWords === 'string') setWakeDraft(payload.config.wakeWords)
           if (typeof payload?.config?.wakeAtStart === 'boolean') setWakeAtStartDraft(payload.config.wakeAtStart)
+          if (typeof payload?.config?.riskWords === 'string') setRiskWordsDraft(payload.config.riskWords)
           if (message !== undefined) setNotice(message)
         } catch (error) {
           setNotice(`${zh.saveErrorPrefix}${error instanceof Error ? error.message : String(error)}`)
@@ -2071,12 +2090,14 @@ window.__ModuleLoader__.load({
       const autoPayload = () => ({
         wakeWords: wakeDraft,
         wakeAtStart: wakeAtStartDraft,
+        riskWords: riskWordsDraft,
       })
 
       const autoTimer = React.useRef(null)
       const draftsDirty =
         wakeDraft !== (snapshot.wakeWords ?? '') ||
-        wakeAtStartDraft !== (snapshot.wakeAtStart !== false)
+        wakeAtStartDraft !== (snapshot.wakeAtStart !== false) ||
+        riskWordsDraft !== (snapshot.riskWords ?? '')
 
       React.useEffect(() => {
         if (!draftsDirty) return undefined
@@ -2090,7 +2111,7 @@ window.__ModuleLoader__.load({
           if (autoTimer.current !== null) clearTimeout(autoTimer.current)
           autoTimer.current = null
         }
-      }, [wakeDraft, wakeAtStartDraft, draftsDirty])
+      }, [wakeDraft, wakeAtStartDraft, riskWordsDraft, draftsDirty])
 
       /**
        * 灵敏度档位：先本地生效（采集循环下一块就按新档算），再串行落盘。
@@ -2240,6 +2261,28 @@ window.__ModuleLoader__.load({
           applyServerState(await postJson('/config', { followActive: next }))
         } catch (error) {
           publish({ followActive: !next })
+          setNotice(`${zh.saveErrorPrefix}${error instanceof Error ? error.message : String(error)}`)
+        }
+      }
+
+      /** 高风险提醒开关：只写配置，命中时 Host 在消息末尾追加提示。 */
+      const toggleRisk = async (next) => {
+        publish({ riskNotice: next })
+        try {
+          applyServerState(await postJson('/config', { riskNotice: next }))
+        } catch (error) {
+          publish({ riskNotice: !next })
+          setNotice(`${zh.saveErrorPrefix}${error instanceof Error ? error.message : String(error)}`)
+        }
+      }
+
+      /** 诊断日志是否记录识别文字：默认关，开启前提示会留下语音内容。 */
+      const toggleLogText = async (next) => {
+        publish({ logTranscript: next })
+        try {
+          applyServerState(await postJson('/config', { logTranscript: next }))
+        } catch (error) {
+          publish({ logTranscript: !next })
           setNotice(`${zh.saveErrorPrefix}${error instanceof Error ? error.message : String(error)}`)
         }
       }
@@ -2539,7 +2582,35 @@ window.__ModuleLoader__.load({
         switchItem('wakeAtStart', zh.wakeAtStartTitle, zh.wakeAtStartHint, wakeAtStartDraft, (value) => setWakeAtStartDraft(value)),
         switchItem('probe', zh.probeTitle, zh.probeHint, snapshot.probeEnabled !== false, (value) => void toggleProbe(value)),
         switchItem('follow', zh.followTitle, zh.followHint, snapshot.followActive !== false, (value) => void toggleFollow(value)),
-        h('p', { className: 'dw-muted' }, zh.advancedNote),
+        switchItem('risk', zh.riskTitle, zh.riskHint, snapshot.riskNotice !== false, (value) => void toggleRisk(value)),
+        snapshot.riskNotice === false
+          ? null
+          : item(
+              'riskWords',
+              zh.riskWordsTitle,
+              zh.riskWordsHint,
+              h(
+                'div',
+                { style: { display: 'flex', gap: '8px', width: '100%' } },
+                h('input', {
+                  className: 'dw-input',
+                  type: 'text',
+                  value: riskWordsDraft,
+                  placeholder: zh.riskWordsPlaceholder,
+                  onChange: (event) => setRiskWordsDraft(event.target.value),
+                }),
+                h(
+                  'button',
+                  {
+                    type: 'button',
+                    className: 'dw-button dw-ghost',
+                    onClick: () => setRiskWordsDraft(DEFAULT_RISK_WORDS),
+                  },
+                  zh.riskReset,
+                ),
+              ),
+            ),
+        switchItem('logText', zh.logTextTitle, zh.logTextHint, snapshot.logTranscript === true, (value) => void toggleLogText(value)),
       ]
 
       // ---------------- 诊断（平铺）
@@ -2669,6 +2740,7 @@ window.__ModuleLoader__.load({
               selfCheck.phase === 'running' ? zh.diagSelfChecking : zh.diagSelfCheck,
             ),
           ),
+          h('p', { className: 'dw-muted' }, zh.diagPrivacyHint),
           copied === '' ? null : h('p', { className: 'dw-banner', role: 'status' }, copied),
           selfCheck.phase === 'ok'
             ? h('p', { className: 'dw-hint is-ok' }, zh.diagSelfCheckOk)

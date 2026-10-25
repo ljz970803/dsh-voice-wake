@@ -13,6 +13,7 @@ import {
   migrate,
   sanitizeField,
 } from '../lib/config.js'
+import { DEFAULT_RISK_WORDS } from '../lib/risk.js'
 
 test('默认值：版本、单句最长、静音、HUD 层级、灵敏度、跟随会话', () => {
   const cfg = defaults()
@@ -24,6 +25,9 @@ test('默认值：版本、单句最长、静音、HUD 层级、灵敏度、跟�
   assert.equal(cfg.hudZIndex, 2147483000)
   assert.equal(cfg.followActive, false)
   assert.equal(cfg.hudEnabled, true)
+  assert.equal(cfg.riskNotice, true)
+  assert.equal(cfg.riskWords, DEFAULT_RISK_WORDS)
+  assert.equal(cfg.logTranscript, false)
 })
 
 test('迁移：老配置会补上新字段的默认值', () => {
@@ -32,6 +36,8 @@ test('迁移：老配置会补上新字段的默认值', () => {
   assert.equal(config.maxSegmentMs, 60000)
   assert.equal(config.wakeSensitivity, 5)
   assert.equal(config.hudZIndex, 2147483000)
+  assert.equal(config.riskNotice, true)
+  assert.equal(config.riskWords, DEFAULT_RISK_WORDS)
 })
 
 test('迁移：旧的连续阈值会被换成灵敏度档位', () => {
