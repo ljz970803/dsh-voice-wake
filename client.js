@@ -45,7 +45,7 @@ window.__ModuleLoader__.load({
       deviceUnnamed: '麦克风 {n}',
       deviceRefresh: '刷新',
       wakeLabel: '唤醒词',
-      wakePlaceholder: '鲸鱼你在吗',
+      wakePlaceholder: '鲸鱼',
       wordsHint: '多个说法用英文逗号分隔；建议 2–3 个字，越短唤醒越快。',
       vadLevel: '灵敏度',
       vadValue: '第 {value} 档',
@@ -65,7 +65,7 @@ window.__ModuleLoader__.load({
       maxSegOption: '{n} 分钟',
       maxSegUnlimited: '不限',
       chimeLabel: '提示音音量',
-      chimeHint: '唤醒/没听清时的提示音；0 为静音。',
+      chimeHint: '唤醒和发送时的提示音；0 为静音。',
       chimeValue: '{n}%',
       hudTitle: '显示 HUD 卡片',
       hudHint: '可拖动，位置会记住；被挡住时点「归位」。',
@@ -76,7 +76,7 @@ window.__ModuleLoader__.load({
       wakeAtStartHint: '避免聊天里提到唤醒词就误触发。',
       advancedNote: '唤醒词必须在段首，句中顺带提到「鲸鱼」不会误唤醒。',
       probeTitle: '快速唤醒探测',
-      probeHint: '每段开头多跑最多 3 次短识别，命中就立刻响提示音；吃 CPU（约 0.2–0.5 秒/段），机器慢可以关掉。',
+      probeHint: '每段开头多跑最多 3 次短识别，命中就尽快切段确认，提示音响得更快；吃 CPU（约 0.2–0.5 秒/段），机器慢可以关掉。',
       followTitle: '发到当前会话',
       followHint: '开启：语音消息跟着你当前打开的会话走；关闭：固定发到「语音唤醒会话」，切到别的会话也不变。',
       micTestTitle: '麦克风测试',
@@ -99,7 +99,7 @@ window.__ModuleLoader__.load({
       permissionUnknown: '未知',
       hintSilent: '完全没有音量（峰值 {peak}）：先看设备选对没、系统有没有静音、Windows 隐私设置是否允许。',
       hintNoText: '有音量（峰值 {peak}）但识别为空：可能这段只有噪声，或说得太短。',
-      hintModels: '识别服务没就绪：先在「设置 → 语音输入」里确认本地模型可用。',
+      hintModels: '识别服务没就绪：先在「设置 → 语音输入」确认已安装/启用，且本地模型可用。',
       hintOk: '链路正常：录音 → 识别都通了。',
       hintError: '识别失败：{detail}',
       diagInfoTitle: '诊断信息',
@@ -127,15 +127,11 @@ window.__ModuleLoader__.load({
       silenceShort: '静音切段',
 
       // ---------------- 状态 / 错误
-      statusOff: '未启用',
-      statusListening: '聆听中',
-      statusConversing: '对话中',
-      statusStalled: '麦克风没出数据',
+      statusStalled: '麦克风没出数据：检查设备是否选对、系统是否静音。',
       modelsMissingTitle: '识别还不能用',
       modelsMissingHint: '需要 DSH 的语音输入（本地 SenseVoice）可用；没装的话先去「设置 → 语音输入」安装/启用官方插件。',
       loadError: '读取语音唤醒设置失败：',
       retry: '重试',
-      audioRetry: '重新打开麦克风',
       micDenied: '打不开麦克风：{detail}',
       micUnsupported: '这个窗口不支持麦克风采集。',
       transcribeError: '识别失败：',
@@ -147,7 +143,6 @@ window.__ModuleLoader__.load({
         'session-create-failed': '创建语音会话失败。',
         'send-failed': '把文字发进会话失败。',
         'bad-audio': '录音格式不对（需要 16 kHz 单声道）。',
-        empty: '这一段没识别出文字。',
       },
 
       // ---------------- HUD（悬浮卡片）
@@ -1679,7 +1674,7 @@ window.__ModuleLoader__.load({
           await startEngine(status.deviceId)
         } catch {
           // startEngine 内部已经写了 mic.denied / mic.error 日志；
-          // 不自动把开关关掉：用户能看到错误，也能按「重新打开麦克风」重试。
+          // 不自动把开关关掉：用户能看到错误，修好权限/设备后重新开关即可。
           stopEngine()
         }
       } else {
@@ -1926,13 +1921,6 @@ window.__ModuleLoader__.load({
         disabled: props.disabled,
         onClick: () => props.onChange(!props.checked),
       })
-    }
-
-    function statusText(state) {
-      if (!state.enabled) return zh.statusOff
-      if (state.micState === 'stalled') return zh.statusStalled
-      if (state.mode === 'conversing') return zh.statusConversing
-      return zh.statusListening
     }
 
     function errorText(state) {
@@ -2341,7 +2329,6 @@ window.__ModuleLoader__.load({
       // 触发阈值画在音量条上，用户能直接看到「说话音量有没有高过线」。
       const thresholdLevel = Math.max(0, Math.min(100, rmsToLevel(effectiveThreshold())))
       const selfCheck = snapshot.selfCheck
-      const modeState = enabled ? (snapshot.mode === 'conversing' ? 'conversing' : 'listening') : 'off'
       const testPhaseText =
         test.phase === 'recording' ? zh.micTesting : test.phase === 'sending' ? zh.micSending : zh.micTestRun
 
@@ -2704,31 +2691,10 @@ window.__ModuleLoader__.load({
               h('button', { type: 'button', className: 'dw-button dw-ghost', onClick: () => window.location.reload() }, zh.retry),
             ),
         notice === '' ? null : h('p', { className: 'dw-banner', role: 'status' }, notice),
-        h(
-          'div',
-          { className: 'dw-statusbar' },
-          h('span', { className: `dw-status is-${modeState}` }, statusText(snapshot)),
-          enabled
-            ? h(
-                'button',
-                {
-                  type: 'button',
-                  className: 'dw-button dw-ghost',
-                  disabled: busy,
-                  onClick: async () => {
-                    stopEngine()
-                    try {
-                      await startEngine(status.deviceId)
-                    } catch {
-                      stopEngine()
-                    }
-                  },
-                },
-                zh.audioRetry,
-              )
-            : null,
-        ),
         error === '' ? null : h('p', { className: 'dw-error', role: 'alert' }, error),
+        enabled && snapshot.micState === 'stalled'
+          ? h('div', { className: 'dw-warn' }, h('p', null, zh.statusStalled))
+          : null,
         enabled && !snapshot.modelsReady
           ? h(
               'div',
