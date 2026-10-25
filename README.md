@@ -7,7 +7,7 @@
 - 解决什么：手被占用、不想打字、或不方便操作电脑时，用语音把指令发进 DSH 会话。
 - 怎么用：单独说唤醒词（默认「鲸鱼」，不要带内容）→ 听到提示音 → 说指令 → 停顿后自动发送。
 - 前置：DSH 提供 `speechToText`（本机 SenseVoice），并允许麦克风；音频只在本机识别、不落盘。
-- 包名/安装：`dsh-voice-wake` / `npm i dsh-voice-wake`
+- 安装：DSH 市场搜索「语音唤醒」（收录后）；或 `dsh plugin --profile desktop add dsh-voice-wake`
 - 配置：`wakeWords` / `wakeSensitivity` / `silenceMs` / `followActive`
 - 扩展：`beforeSend` / `onTranscript` / `onStateChange` / `hud.js`
 - 详细：`ARCHITECTURE.md`
@@ -27,8 +27,9 @@
 
 ## 安装
 
-- 在 DSH 市场的「插件」里搜索 **语音唤醒** 安装；
-- 或让包管理器安装：`npm install dsh-voice-wake`（版本 `1.0.x`）。
+- **推荐**：在 DSH 市场的「插件」里搜索 **语音唤醒** 安装（收录后）；
+- **CLI**：`dsh plugin --profile desktop add dsh-voice-wake`（把 `desktop` 换成你的配置档名）；
+- **注意**：单独 `npm install dsh-voice-wake` 只会下载包，**不会注册插件**，DSH 不会加载它；必须走市场或 `dsh plugin add`。
 
 ## 怎么用
 
